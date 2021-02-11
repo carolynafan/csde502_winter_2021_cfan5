@@ -1,0 +1,117 @@
+---
+title: "CSDE 502- Homework 4"
+author: "Carolyn Fan"
+date: "2/3/2021"
+output: 
+  bookdown::html_document2:
+    toc: TRUE
+    number_sections: TRUE
+---
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(readstata13)
+library(pander)
+library(captioner)
+library(Rmisc)
+```
+
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+gradpain <- c(rep(0,11), rep(1,1), rep(2,2), rep(3,6), rep(4,8), rep(5,10), rep(6,8), rep(7,30), rep(8,10), rep(9,6), rep(10,2))
+```
+
+## Question 1: How many graduate students are in the sample? Use R code to determine this.
+```{r, warning=FALSE, message=FALSE}
+length(gradpain)
+
+```
+There are `r length(gradpain)` students in the sample. 
+
+## Question 2: What is the sample mean?
+```{r, warning=FALSE, message=FALSE}
+mean(gradpain)
+```
+The sample mean of pain on a scale from 0 to 10 is `r mean(gradpain)`.
+
+## Box 1
+```{r, warning=FALSE, message=FALSE}
+fx_box1 <- function (x){
+  d.vec <- x
+  n <- length(x)
+  return(c("N"=n, "Mean"=mean(x)))
+}
+
+fx_box1(gradpain)
+
+```
+
+## Box 2
+```{r, warning=FALSE, message=FALSE}
+s <- sample(x=gradpain, size=100, replace=TRUE)
+
+F <- NULL
+
+set.seed(7)
+for(i in seq(from=1, to=100, by=1)){
+  fx_box1(gradpain)
+  s <- sample(x=gradpain, size=100, replace=TRUE)
+  m <- mean(s)
+  F <- c(F, m)
+}
+
+mean(F)
+sd(F)
+```
+
+## Question 3: What is the mean of these 100 means?
+The mean is `r mean(F)`.
+
+## Question 4: What is the standard deviation of these 100 means?
+The standard deviation is `r sd(F)`.
+
+## Box 3
+```{r, warning=FALSE, message=FALSE}
+
+D <- NULL
+
+fx_box3 <-function(x, d.vec, n, num.samples){
+  d.vec <- x
+  n <- length(x)
+  num.samples <- 100
+  m <- mean(x)
+  return(c(n, m))
+}
+
+for(i in seq(from=1, to=100, by=1)){
+  fx_box3(gradpain)
+  s <- sample(x=gradpain, size=100, replace=TRUE)
+  num.samples <- 100
+  m <- mean(s)
+  D <- c(D, m)
+  m2 <- mean(D)
+  sd <- sd(D)
+  ci <- CI(x=D, ci=0.95)
+  }
+
+```
+
+## Question 5: What does your function return for the mean of means?
+The mean of means is `r m2`
+
+## Question 6: What does your function return for the standard deviation of means?
+The standard deviation is `r sd`
+
+## Question 7: What does your function return for the 95% confidence interval around the mean?
+The 95% CI, with the mean in the middle, is (`r ci`).
+
+
+## Source Code
+[cfan5_HW_4.rmd](cfan5_HW_4.Rmd)
+
+```{r, comment='', echo=FALSE}
+cat(readLines("cfan5_HW_4.rmd"), sep='\n')
+```
+
