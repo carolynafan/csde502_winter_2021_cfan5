@@ -1,7 +1,8 @@
 ---
 title: "CSDE 502- Homework 4"
 author: "Carolyn Fan"
-date: "2/3/2021"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+mailto: "cfan5@uw.edu"
 output: 
   bookdown::html_document2:
     toc: TRUE
@@ -41,7 +42,7 @@ The sample mean of pain on a scale from 0 to 10 is `r mean(gradpain)`.
 fx_box1 <- function (x){
   d.vec <- x
   n <- length(x)
-  return(c("N"=n, "Mean"=mean(x)))
+  return(list("N"=n, "Mean"=mean(x)))
 }
 
 fx_box1(gradpain)
@@ -94,7 +95,8 @@ for(i in seq(from=1, to=100, by=1)){
   m2 <- mean(D)
   sd <- sd(D)
   ci <- CI(x=D, ci=0.95)
-  }
+}
+options(digits=3)
 
 ```
 
