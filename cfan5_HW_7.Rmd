@@ -1,0 +1,166 @@
+---
+title: "cfan5_HW_7"
+author: "Carolyn Fan"
+date: "2/24/2021"
+output: 
+  bookdown::html_document2:
+    toc: TRUE
+    number_sections: TRUE
+---
+# Set Up
+``````{r setup, include=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(readstata13)
+library(pander)
+library(naniar)
+library(captioner)
+library(haven)
+library(labelled)
+
+AHwave1_v1_haven <- haven::read_dta("http://staff.washington.edu/phurvitz/csde502_winter_2021/data/AHwave1_v1.dta")
+foreign_to_labelled(AHwave1_v1_haven)
+var_label(AHwave1_v1_haven)
+```
+
+# Subsetting and Preparing Data
+In this report, we utilize the Add Health data set to investigate the relationship between race and symptoms of depression. To do so, we first subset our data to include the participant ID, race as reported by the interviewer, and two symptoms of depression ("felt depressed" and "too tired to do things"). We then use the data set's attributes to assign labels and create factor variables on which to conduct analysis. 
+
+```{r }
+AHwave1_v1_haven_subset <- select(AHwave1_v1_haven, aid, h1gi9, h1fs6, h1fs7)
+
+AHwave1_v1_haven_subset %>% attributes() %>% map(~ head(.))
+
+tmpdir <- Sys.getenv("TEMP") #couldn't get the temp directory to work
+saveRDS(AHwave1_v1_haven_subset, file = "AHwave1_v1_haven.RDS")
+
+AHwave1_v1_haven_subset_rds <- readRDS(file = "AHwave1_v1_haven.RDS")
+
+is(AHwave1_v1_haven_subset_rds)
+
+AHwave1_v1_haven_subset_rds$h1gi9 %>% 
+    attributes()
+
+#factor variables
+#race
+AHwave1_v1_haven_subset_rds$race <- as.factor(AHwave1_v1_haven_subset_rds$h1gi9)
+
+AHwave1_v1_haven_subset_rds$race<- factor(AHwave1_v1_haven_subset_rds$h1gi9,
+                              levels= c(1, 2, 3, 4, 5, 6, 8),
+                              labels=c("(1) White", "(2) Black/African American", "(3) American Indian/Native American", "(4) Asian/Pacific Islander", "(5) Other", "(6) Refused", "(9) Not Applicable"))
+
+summary(AHwave1_v1_haven_subset_rds$race)
+
+#depressed
+AHwave1_v1_haven_subset_rds$depressed <- factor(AHwave1_v1_haven_subset_rds$h1fs6)
+
+depressed_levels <- AHwave1_v1_haven_subset_rds$h1fs6 %>% 
+  attributes() %>% 
+  extract2("labels") %>% 
+  names()
+
+AHwave1_v1_haven_subset_rds$depressed <- factor(AHwave1_v1_haven_subset_rds$h1fs6,
+                                           labels=depressed_levels,
+                                           ordered=TRUE) %>% 
+  fct_relevel(rev)
+
+summary(AHwave1_v1_haven_subset_rds$depressed)
+#tired
+AHwave1_v1_haven_subset_rds$tired <- factor(AHwave1_v1_haven_subset_rds$h1fs7)
+
+tired_levels <- AHwave1_v1_haven_subset_rds$h1fs7 %>% 
+  attributes() %>% 
+  extract2("labels") %>% 
+  names()
+
+AHwave1_v1_haven_subset_rds$tired <- factor(AHwave1_v1_haven_subset_rds$h1fs7, 
+                                           labels=tired_levels,
+                                           ordered=TRUE) %>% 
+  fct_relevel(rev)
+
+summary(AHwave1_v1_haven_subset_rds$tired)
+```
+
+# Frequency Tables
+To further explore our data, we created frequency tables with the counts and percentages of race, depression, and tiredness. 
+
+In this data set, 66% of participants are White, 24.6% are Black/African American, 1.1% are American Indian/Native American, 3.6% are Asian/Pacific Islander, and 4.6% are of another race (Table 3.1). 
+
+The majority of participants are Never or Rarely depressed (61.4%). However, 28.5% state they are sometimes depressed, 6.8% state they are depressed a lot of the time, and 3.0% are depressed most/all of the time (Table 3.2). 
+
+About half of participants are never/rarely tired (42.4%) or sometimes tired (45.1%). However, 9.7% of participants are tired a lot of the time, and 2.6% are tired most/all of the time (Table 3.3).  
+
+```{r 1}
+AHwave1_v1_haven_subset_rds %>% 
+    group_by(race) %>% 
+    summarise(n = n()) %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    mutate(`%` = `%` %>% round(1)) %>% 
+    kable(caption="Race: Frequency and Percentages") %>% 
+    kable_styling(full_width = FALSE, position = "left")
+```
+
+``` {r 2}
+AHwave1_v1_haven_subset_rds %>% 
+    group_by(depressed) %>% 
+    summarise(n = n()) %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    mutate(`%` = `%` %>% round(1)) %>% 
+    kable(caption="Depression: Frequency and Percentages") %>% 
+    kable_styling(full_width = FALSE, position = "left")
+```
+
+```{r 3}
+AHwave1_v1_haven_subset_rds %>% 
+    group_by(tired) %>% 
+    summarise(n = n()) %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    mutate(`%` = `%` %>% round(1)) %>% 
+    kable(caption="Tiredness: Frequency and Percentages") %>% 
+    kable_styling(full_width = FALSE, position = "left")
+```
+
+# Two-Variable Frequency Table
+To attempt to understand the relationship between race and depression, we created a two-variable frequency table (Table 4.1). For simplicity, we focus on the depression variable (not the tiredness variable) for this analysis. 
+
+From this detailed breakdown, we can see that 62.5% of White participants are never/rarely depressed, compared to 60.9% of Black/African American participants, 57.5% of American Indian/Native American participants, 52.5% of Asian/Pacific Islander participants, and 56.9% of other race participants. White participants have the highest percantage of participants in this category, while Asian/Pacific Islander participants have the lowest percentage of participants in the category. 
+
+```{r}
+AHwave1_v1_haven_subset_rds %>% 
+    group_by(race,
+             depressed) %>% 
+    summarise(n = n(), .groups = "drop_last") %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    mutate(`%` = `%` %>% round(1)) %>% 
+    kable(caption="Race by Depression Categories") %>% 
+    kable_styling(full_width = FALSE, position = "left")
+```
+
+# Graph
+Table 4.1, although providing important insight, is difficult to read and comprehend. The data would be much better displayed in a bar graph. Figure 5.1 shows such a graph, with bars for each racial category and stacked percentages for each depression category. The graph offers a more visual and pleasing way to absorb information on the breakdown of depression categories by race.
+
+Looking at the percentages of participants who feel depressed most/all of the time, American Indian/Native American participants have the highest relative percentage, while White participants have the smallest.
+
+```{r fig.cap="Bar Graph of Race, broken down by Depression Categories"}
+race_depressed <- AHwave1_v1_haven_subset_rds %>% 
+    group_by(race,
+             depressed) %>% 
+    summarise(n = n(), .groups = "drop_last") %>% 
+    mutate(`%` = n / sum(n) * 100) %>% 
+    filter(!str_detect(race, regex("refused|know", ignore_case = TRUE)))
+
+ggplot(data = race_depressed, mapping = aes(x = race, y = `%`, fill = depressed)) +
+    geom_bar(stat = "identity") +
+    coord_flip() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+# Source Code
+[cfan5_HW_7.rmd](cfan5_HW_7.Rmd)
+
+```{r, comment='', echo=FALSE}
+cat(readLines("cfan5_HW_7.rmd"), sep='\n')
+```
+
