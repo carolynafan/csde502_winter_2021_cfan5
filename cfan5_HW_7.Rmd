@@ -1,7 +1,8 @@
 ---
 title: "cfan5_HW_7"
 author: "Carolyn Fan"
-date: "2/24/2021"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+mailto: "cfan5@uw.edu"
 output: 
   bookdown::html_document2:
     toc: TRUE
