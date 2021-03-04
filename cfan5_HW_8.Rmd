@@ -1,0 +1,237 @@
+---
+title: "CSDE 502 Winter 2021, Assignment 8"
+author: "Carolyn Fan (cfan5)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+mailto: "cfan5@uw.edu"
+output: 
+    bookdown::html_document2:
+        number_sections: true
+        self_contained: true
+        code_folding: hide
+        toc: true
+        toc_float:
+            collapsed: true
+            smooth_scroll: false
+    pdf_document:
+        number_sections: true
+        toc: true
+        fig_cap: yes
+        keep_tex: yes
+urlcolor: blue 
+---
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(readstata13)
+library(pander)
+library(naniar)
+library(captioner)
+library(haven)
+library(labelled)
+library(plyr)
+
+figure_nums <- captioner(prefix = "Figure")
+table_nums <- captioner(prefix = "Table")
+
+dat <- read_dta("http://staff.washington.edu/phurvitz/csde502_winter_2021/data/AHwave1_v1.dta")
+
+metadata <- bind_cols(
+    # variable name
+    varname = colnames(dat),
+    # label
+    varlabel = lapply(dat, function(x) attributes(x)$label) %>% 
+        unlist(),
+    # values
+    varvalues = lapply(dat, function(x) attributes(x)$labels) %>% 
+        # names the variable label vector
+        lapply(., function(x) names(x)) %>% 
+        # as character
+        as.character() %>% 
+        # remove the c() construction
+        str_remove_all("^c\\(|\\)$")
+)
+```
+
+___Explanation___:
+This assignment is intended to give you more practice in manipulating variables. 
+
+___Instructions___: 
+
+1. Make sure your Rmd file has no local file system dependencies (i.e., anyone should be able to recreate the output HTML using only the Rmd source file).
+1. Make a copy of this Rmd file and add answers below each question. The code that generated the answers should be included, as well as the complete source code for the document.
+1. Change the YAML header above to identify yourself and include contact information.
+1. For any tables or figures, include captions and cross-references and any other document automation methods as necessary.
+1. Make sure your output HTML file looks appealing to the reader.
+1. Upload the final Rmd to your github repository.
+1. Download [`assn_08_id.txt`](http://staff.washington.edu/phurvitz/csde502_winter_2021/assignments/assn_08_id.txt) and include the URL to your Rmd file on github.com.
+1. Create a zip file from your copy of `assn_08_id.txt` and upload the zip file to the Canvas site for Assignment 8. ___The zip file should contain only the text file. Do not include any additional files in the zip file--everything should be able to run from the file you uploaded to github.com. Use zip format and not 7z or any other compression/archive format.___
+
+
+#
+Imagine a new variable: multirace, using the following value definitions:
+
+	1 = one race, White
+	2 = one race, not White
+	3 = two races, includes White
+	4 = two races, both non-White
+	5 = three or more races, includes White
+	6 = three or more races, all non-White
+	9 = any race missing (White, Black/African American, American Indian, Asian, other)
+	
+
+## 
+__Fill in the codes for the hypothetical cases below (`r table_nums(name = "t01", display = "cite")`).__
+
+`r table_nums(name = "t01", caption = "A hypothetical data set")`
+
+| white| black| AI| asian| raceother|multirace |
+|-----:|-----:|--:|-----:|---------:|---------:|
+|     1|     0|  0|     0|         0|         1|
+|     0|     1|  0|     0|         0|         2|
+|     1|     0|  0|     1|         0|         3|
+|     0|     1|  1|     0|         0|         4|
+|     1|     1|  0|     1|         0|         5|
+|     0|     1|  0|     0|         1|         4|
+|     0|     1|  1|     0|         1|         6|
+|     1|     0|  1|     0|         0|         3|
+|     1|     1|  1|     0|         1|         5|
+|     6|     1|  8|     1|         6|         9|	
+
+
+## 
+__Using this data frame (code below), report how many cases checked more than one race.__ Use R code to make this calculation and use inline expressions.
+
+``` {r}
+dat2 <- 
+structure(
+    list(
+        white = c(1L, 0L, 1L, 0L, 1L, 0L, 0L, 1L, 1L, 6L),
+        black = c(0L, 1L, 0L, 1L, 1L, 1L, 1L, 0L, 1L, 1L), 
+        AI = c(0L, 0L, 0L, 1L, 0L, 0L, 1L, 1L, 1L, 8L), 
+        asian = c(0L, 0L, 1L, 0L, 1L, 0L, 0L, 0L, 0L, 1L), 
+        raceother = c(0L, 0L, 0L, 0L, 0L, 1L, 1L, 0L, 1L, 6L), 
+        multirace = c(NA, NA, NA, NA, NA, NA, NA, NA, NA, NA)
+    ), 
+    class = "data.frame", 
+    row.names = c(NA, -10L)
+)
+
+dat2$white
+```
+
+
+##
+__Write R code to create the multirace variable, using the data set [AHwave1_v3.rds](http://staff.washington.edu/phurvitz/csde502_winter_2021/data/AHwave1_v3.rds).__ _Hint: You may want to create another variable, numrace, that counts the number of races._ Use [`download_file()`](https://stat.ethz.ch/R-manual/R-devel/library/utils/html/download.file.html) and `Sys.getenv("TEMP")` to download the file to your system's `TEMP` directory to avoid local file system dependencies.
+
+```{r}
+dat <- dat %>% mutate(multirace=
+                        case_when(
+                          h1gi6a == 1 & h1gi6b==0 & h1gi6c==0 & h1gi6d==0 & h1gi6e==0 ~ 1,
+                          h1gi6a==0 & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) ~ 2,
+                          h1gi6a==1 & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) ~ 3,
+                          h1gi6a==0 & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) ~ 4,
+                          h1gi6a==1 & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) ~ 5,
+                          h1gi6a==0 & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) & (h1gi6b==1 | h1gi6c==1 | h1gi6d==1 | h1gi6e==1) ~ 6,
+                           h1gi6a <= 6 | h1gi6b <= 6 | h1gi6c <= 6 | h1gi6d <= 6 | h1gi6e <= 6 ~ 9,
+                          TRUE ~ 10
+                        ))
+
+```
+
+## 
+__Label the multirace variable as well as its values using attribute labels.__.
+
+```{r}
+
+dat$multirace_cat <- factor(dat$multirace,
+                            levels=c(1, 2, 3, 4, 5, 6, 9, 10),
+                            labels=c("(1) One Race, White", "(2) One race, not White", "(3) Two races, includes White", "(4) Two races, both non-White", "(5) Three or more races, includes White", "(6) Three or more races, all non-White", "(9) Any race missing", "(10) Unknown/Missing"))
+
+summary(dat$multirace_cat)
+```
+
+## 
+__Include below a contingency table of the multirace variable. Make sure that the values are labelled so the table is readable, and also include any missing values.__
+
+```{r}
+table(dat$multirace_cat) %>% kable()
+```
+
+# 
+__Review part B of each of the answers (i.e., `H1KQ1B .. H1KQ10B`) to the Knowledge Quiz (Section 19 of the Add Health questionnaire, documented in `INH19PUB.PDF`). The 10 questions each ask: “How confident are you that your answer is correct?”__
+
+## 
+__Write R code that creates a single summary variable named `kqconfidence`, with a larger number representing the respondent being more confident across all questions (scale of 0 to 3 for each individual question; `kqconfidence` will be the sum for each subject across the 10 questions). Note that any observations with value 7 (i.e., age less than 15) should be removed from the data frame, and values 6, 8, and 9 should be coded as `NA` (i.e., missing) for the purposes of scoring confidence. Document your code so that the reader knows how you scored the scale and how you handled missing values. Make sure to label the new variable.__
+
+```{r}
+dat3 <- filter(dat, h1kq1b!=7, h1kq2b!=7, h1kq3b!=7, h1kq4b!=7, h1kq5b!=7, h1kq6b!=7, h1kq7b!=7, h1kq8b!=7, h1kq9b!=7, h1kq10b!=7)
+
+dat3<- dat3 %>% replace_with_na(replace=list(h1kq1b=c(6, 8, 9),
+                                      h1kq2b=c(6, 8, 9),
+                                      h1kq3b=c(6, 8, 9),
+                                      h1kq4b=c(6, 8, 9),
+                                      h1kq5b=c(6, 8, 9),
+                                      h1kq6b=c(6, 8, 9),
+                                      h1kq7b=c(6, 8, 9),
+                                      h1kq8b=c(6, 8, 9),
+                                      h1kq9b=c(6, 8, 9),
+                                      h1kq10b=c(6, 8, 9)))
+
+table(dat3$h1kq1b)
+
+dat3$kqconfidence <- dat3$h1kq1b + dat3$h1kq2b + dat3$h1kq3b + dat3$h1kq4b + dat3$h1kq5b + dat3$h1kq6b + dat3$h1kq7b + dat3$h1kq8b + dat3$h1kq9b + dat3$h1kq10b
+
+summary(dat3$kqconfidence)
+```
+
+## 
+__Create and include below a contingency table from `kqconfidence` with raw counts, percentages, and cumulative percentages.__
+
+```{r}
+table1<-table(dat3$kqconfidence)
+table2<-prop.table(table1)
+table3 <- 100*cumsum(table1)/sum(table1)
+
+
+cbind(table1, round(table2*100, 2), table3) %>% kable(col.names=c("Count", "Percentage", "Cumulative Percentage"), caption="Knowledge Quiz Confidence Score")
+```
+
+## 
+__[BONUS] For each subject there were zero to 10 “missing” answers to each of the 10 component questions. We would like to know what this distribution is. Include below a table that shows the count of subjects for each unique value of the count of missing questions.__
+
+## 
+__For each possible value of the Knowledge Quiz Part A sum score (from Section \@ref(scoring-across-columns)) what is the mean `kqconfidence` level? __
+
+```{r}
+correct <- c(2, 1, 2, 2, 2, 2, 2, 1, 2, 2) 
+names(correct) <- str_subset(string = names(dat3),
+                             pattern = "h1kq.*a")
+
+# strip the ID column and transpose
+z <- dat3 %>% 
+    select(-1) %>% 
+    t() 
+
+# compare, transpose, and make a data frame
+ans_tranpose <- (z == correct) %>% 
+    t(.) %>% 
+    data.frame()
+
+dat3$h1kq1a
+dat3$sumscore<-rowSums(ans_tranpose)
+
+dat3$sumscore<-factor(dat3$sumscore)
+
+dat4 <- select(dat3, sumscore, kqconfidence)
+
+dat4 %>% group_by(sumscore) %>% mutate(mean(kqconfidence)) %>% kable(col.names=c("Sum Score", "Mean Confidence Score"), caption="Knowledge Quiz")
+#couldn't get how to make this appear neatly with no repeated values
+
+table(dat4$sumscore, dat4$kqconfidence)
+```
+
+## 
+__[BONUS] For each respondent, create two different confidence scores: a confidence score for the items answered correctly and a confidence score for the items answered incorrectly. How many respondents are more confident when answering incorrectly?__
