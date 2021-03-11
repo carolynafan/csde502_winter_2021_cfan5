@@ -1,0 +1,215 @@
+---
+title: "CSDE 502 Winter 2021, Assignment 8"
+author: "Carolyn Fan (cfan5)"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+mailto: "cfan5@uw.edu"
+output: 
+    bookdown::html_document2:
+        number_sections: true
+        self_contained: true
+        code_folding: hide
+        toc: true
+        toc_float:
+            collapsed: true
+            smooth_scroll: false
+    pdf_document:
+        number_sections: true
+        toc: true
+        fig_cap: yes
+        keep_tex: yes
+urlcolor: blue 
+---
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(knitr)
+library(kableExtra)
+library(readstata13)
+library(pander)
+library(naniar)
+library(captioner)
+library(haven)
+library(labelled)
+library(plyr)
+
+figure_nums <- captioner(prefix = "Figure")
+table_nums <- captioner(prefix = "Table")
+```
+
+___Explanation___:
+This assignment is intended to give you more practice delving into the Add Health data set and in manipulating additional variables. 
+
+___Instructions___: 
+
+1. Make sure your Rmd file has no local file system dependencies (i.e., anyone should be able to recreate the output HTML using only the Rmd source file).
+1. Make a copy of this Rmd file and add answers below each question. The code that generated the answers should be included, as well as the complete source code for the document.
+1. Change the YAML header above to identify yourself and include contact information.
+1. For any tables or figures, include captions and cross-references and any other document automation methods as necessary.
+1. Make sure your output HTML file looks appealing to the reader.
+1. Upload the final Rmd to your github repository.
+1. Download [`assn_id.txt`](http://staff.washington.edu/phurvitz/csde502_winter_2021/assignments/assn_id.txt) and include the URL to your Rmd file on github.com.
+1. Create a zip file from your copy of `assn_id.txt` and upload the zip file to the Canvas site for Assignment 9. ___The zip file should contain only the text file. Do not include any additional files in the zip file--everything should be able to run from the file you uploaded to github.com. Please use zip format and not 7z or any other compression/archive format.___
+
+
+#
+__Using the full household roster (you'll need to go back the full raw data source, [21600-0001-Data.dta](http://staff.washington.edu/phurvitz/csde502_winter_2021/data/21600-0001-Data.dta.zip)), create the following variables for each respondent. Document any decisions that you make regarding missing values, definitions, etc. in your narrative as well as in the R code.  Include a frequency tabulation and a histogram of each result.__
+
+```{r}
+#Reading in zip dta file 
+temp <- tempfile()
+download.file("http://staff.washington.edu/phurvitz/csde502_winter_2021/data/21600-0001-Data.dta.zip", temp)
+
+data_temp <- unzip(temp, "21600-0001-Data.dta")
+
+ahdata <- read_dta("21600-0001-Data.dta")
+
+metadata <- bind_cols(
+    # variable name
+    varname = colnames(ahdata),
+    # label
+    varlabel = lapply(ahdata, function(x) attributes(x)$label) %>% 
+        unlist(),
+    # values
+    varvalues = lapply(ahdata, function(x) attributes(x)$labels) %>% 
+        # names the variable label vector
+        lapply(., function(x) names(x)) %>% 
+        # as character
+        as.character() %>% 
+        # remove the c() construction
+        str_remove_all("^c\\(|\\)$")
+)
+
+DT::datatable(metadata) #metadata table
+```
+
+
+##
+__Total number in household__
+```{r}
+summary(ahdata$S27)
+ahdata<- ahdata %>% replace_with_na(replace=list(S27=99))
+summary(ahdata$S27)
+
+ahdata$household <- factor(ahdata$S27, 
+                           levels= c(1, 2, 3, 4, 5, 6, 7),
+                           labels= c("1", "2", "3", "4", "5", "6 or more", "Other"))
+summary(ahdata$household)
+
+hist_household <- ggplot(ahdata, aes(x=household)) + geom_histogram(stat="count", na.rm =TRUE)
+hist_household
+```
+
+##
+__Number of sisters__
+```{r}
+summary(ahdata$H1HR5A)
+
+ahdata <- ahdata %>% mutate(
+    H1HR5A_sister= if_else(H1HR5A==7, 1, 0), 
+    H1HR5B_sister= if_else(H1HR5B==7, 1, 0),
+    H1HR5C_sister= if_else(H1HR5C==7, 1, 0),
+    H1HR5D_sister= if_else(H1HR5D==7, 1, 0),
+    H1HR5E_sister= if_else(H1HR5E==7, 1, 0),
+    H1HR5F_sister= if_else(H1HR5F==7, 1, 0),
+    H1HR5G_sister= if_else(H1HR5G==7, 1, 0),
+    H1HR5H_sister= if_else(H1HR5H==7, 1, 0),
+    H1HR5I_sister= if_else(H1HR5I==7, 1, 0),
+    H1HR5J_sister= if_else(H1HR5J==7, 1, 0),
+    H1HR5K_sister= if_else(H1HR5K==7, 1, 0),
+    H1HR5L_sister= if_else(H1HR5L==7, 1, 0),
+    H1HR5M_sister= if_else(H1HR5M==7, 1, 0),
+    H1HR5N_sister= if_else(H1HR5N==7, 1, 0)
+    )
+ 
+ahdata$sister_count<- ahdata$H1HR5A_sister + ahdata$H1HR5B_sister + ahdata$H1HR5C_sister+ahdata$H1HR5D_sister+ahdata$H1HR5E_sister+ahdata$H1HR5F_sister+ahdata$H1HR5G_sister+ahdata$H1HR5H_sister+ahdata$H1HR5I_sister+ahdata$H1HR5J_sister+ahdata$H1HR5K_sister+ahdata$H1HR5L_sister+ahdata$H1HR5M_sister+ahdata$H1HR5N_sister
+
+summary(ahdata$sister_count)
+
+hist(ahdata$sister_count)
+```
+
+##
+__Number of brothers__
+
+```{r}
+ahdata <- ahdata %>% mutate(
+    H1HR5A_brother= if_else(H1HR5A==1, 1, 0), 
+    H1HR5B_brother= if_else(H1HR5B==1, 1, 0),
+    H1HR5C_brother= if_else(H1HR5C==1, 1, 0),
+    H1HR5D_brother= if_else(H1HR5D==1, 1, 0),
+    H1HR5E_brother= if_else(H1HR5E==1, 1, 0),
+    H1HR5F_brother= if_else(H1HR5F==1, 1, 0),
+    H1HR5G_brother= if_else(H1HR5G==1, 1, 0),
+    H1HR5H_brother= if_else(H1HR5H==1, 1, 0),
+    H1HR5I_brother= if_else(H1HR5I==1, 1, 0),
+    H1HR5J_brother= if_else(H1HR5J==1, 1, 0),
+    H1HR5K_brother= if_else(H1HR5K==1, 1, 0),
+    H1HR5L_brother= if_else(H1HR5L==1, 1, 0),
+    H1HR5M_brother= if_else(H1HR5M==1, 1, 0),
+    H1HR5N_brother= if_else(H1HR5N==1, 1, 0)
+    )
+ 
+ahdata$brother_count<- ahdata$H1HR5A_brother+ahdata$H1HR5B_brother + ahdata$H1HR5C_brother+ahdata$H1HR5D_brother+ahdata$H1HR5E_brother+ahdata$H1HR5F_brother+ahdata$H1HR5G_brother+ahdata$H1HR5H_brother+ahdata$H1HR5I_brother+ahdata$H1HR5J_brother+ahdata$H1HR5K_brother+ahdata$H1HR5L_brother+ahdata$H1HR5M_brother+ahdata$H1HR5N_brother
+
+summary(ahdata$brother_count)
+
+hist(ahdata$brother_count)
+```
+
+##
+__Total number of siblings__
+
+```{r}
+summary(ahdata$H1HR14)
+ahdata <- ahdata %>% replace_with_na(replace=list(H1HR14=c(96, 98, 99)))
+summary(ahdata$H1HR14)
+
+ahdata$siblings_count <- ahdata$H1HR14-1
+
+hist(ahdata$siblings_count)
+```
+
+#
+__What proportion of students live with two biological parents? Include the analysis in your R code.__
+```{r}
+summary(ahdata$PC7)
+summary(ahdata$PC3)
+ahdata <- ahdata %>% replace_with_na(replace=list(PC6B=c(6,7, 8),
+                                                  PC2=c(6,7, 8)))
+ahdata <- ahdata %>% mutate(both_parents = case_when(
+    PC7==1 & PC3==1 ~ 1,
+    PC7==0 | PC3==0 ~ 0,
+    TRUE~ NA_real_
+))
+
+summary(ahdata$both_parents)
+table_both_parents <- prop.table(table(ahdata$both_parents))*100
+table_both_parents%>% kable(col.names=c("Living with both biological parents (0=no, 1=yes)", "Proportion(%)"))
+```
+
+#
+__Calculate the number of household members that are NOT biological mother, biological father, full brother or full sister. Create a contingency table and histogram for this variable.__
+
+```{r}
+ahdata <- ahdata %>% mutate(parents_count = case_when(
+    PC7==1 & PC3==1 ~ 2,
+    PC7==1 | PC3==1 ~ 1,
+    PC7==0 & PC3==0 ~ 0,
+    TRUE~ NA_real_
+))
+
+summary(ahdata$S27)
+
+ahdata$otherfam_count <- ahdata$S27- ahdata$sister_count - ahdata$brother_count - ahdata$parents_count
+summary(ahdata$otherfam_count)
+
+hist(ahdata$otherfam_count)
+#Note: negative numbers exist because the count variable for number of people in household had a cut-off at "6 or more" family members
+```
+
+## Source code
+[cfan5_HW_9.rmd](cfan5_HW_9.Rmd)
+```{r comment=''}
+cat(readLines(con = "cfan5_HW_9.Rmd"), sep = '\n')
+```
